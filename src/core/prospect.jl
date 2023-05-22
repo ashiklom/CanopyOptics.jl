@@ -83,9 +83,9 @@ function prospect(
     Tsub    = bNm1.*(a2.-1)./denom
 
     # Case of zero absorption
-    j       = findall(r.+t .>= 1)
-    Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(leaf.N-1))
-    Rsub[j] = 1 .-Tsub[j]
+    # j       = findall(r.+t .>= 1)
+    # Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(leaf.N-1))
+    # Rsub[j] = 1 .-Tsub[j]
 
     # Reflectance & transmittance of the leaf: combine top layer with next N-1 layers
     denom   = FT(1) .-Rsub.*r
