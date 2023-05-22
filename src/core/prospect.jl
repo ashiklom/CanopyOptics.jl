@@ -31,7 +31,8 @@ function prospect(
     # ***********************************************************************
 
     (;N, Ccab, Ccar, Cbrown, Canth, Cw, Cm, Cprot, Ccbc) = leaf;
-    (;Kcab, Kant, Kb, Kcar, Km, Kw, nᵣ, Kp, Kcbc)        = optis;
+    (;Kcab, Kant, Kb, Kcar, Km, Kw, nᵣ, Kp, Kcbc,
+        talf, ralf, t12, r12, t21, r21)                  = optis;
 
     # This can go into a separate multiple dispatch function as the rest remains constant across versions!
     Kall=(Ccab*Kcab + Ccar*Kcar + Canth*Kant + Cbrown*Kb + Cw*Kw + Cm*Km + Cprot*Kp +Ccbc * Kcbc) / N;
@@ -48,16 +49,7 @@ function prospect(
     # ***********************************************************************
     # reflectivity & transmissivity at the interface
     #-------------------------------------------------
-    # From Prospect-D, uses 40 here instead of 59 from CVT)
-
-    #talf    = calctav.(59.,nr)
-    talf    = calctav.(FT(40),nᵣ)
-    ralf    = FT(1) .-talf
-
-    t12     = calctav.(FT(90), nᵣ)
-    r12     = FT(1) .-t12
-    t21     = t12./(nᵣ.^2)
-    r21     = FT(1) .-t21
+    # talf, ralf, t12, r12, t21, r21 -- All are precalculated in `loadProspect.jl`
 
     # top surface side
     denom   = FT(1) .-r21.*r21.*tau.^2
@@ -105,52 +97,16 @@ function prospect(
     return T,R
 end
 
-
-
-"""
-    calctav(α::FT, nr::FT) where {FT<:AbstractFloat}
-
-Computes transmission of isotropic radiation across a dielectric surface 
-(Stern F., 1964; Allen W.A.,Appl. Opt., 3(1):111-113 1973)). 
-From calctav.m in PROSPECT-D
-# Arguments
-- `α` angle of incidence [degrees]
-- `nr` Index of refraction
-"""
-function calctav(α::FT, nr::FT2) where {FT,FT2}
-    a   = ((nr+1) ^ 2) / 2;
-    a3  = a  ^ 3;
-    n2  = nr ^ 2;
-    n4  = nr ^ 4;
-    n6  = nr ^ 6;
-    np  = n2 + 1;
-    np2 = np ^ 2;
-    np3 = np ^ 3;
-    nm2 = (n2 - 1) ^2;
-    k   = ((n2-1) ^ 2) / -4;
-    k2  = k  ^ 2;
-    sa2 = sind(α) ^ 2;
-
-    _b1 = (α==90 ? 0 : sqrt( (sa2 - np/2)^2 + k ));
-    _b2 = sa2 - np/2;
-    b   = _b1 - _b2;
-    b3  = b ^ 3;
-    ts  = ( k2 / (6*b3) + k/b - b/2 ) - ( k2 / (6*a3) + k/a - a/2 );
-    tp1 = -2 * n2 * (b-a) / (np2);
-    tp2 = -2 * n2 * np * log(b/a) / (nm2);
-    tp3 = n2 * (1/b - 1/a) / 2;
-    tp4 = 16 * n4 * (n4+1) * log((2*np*b - nm2) / (2*np*a - nm2)) / (np3*nm2);
-    tp5 = 16 * n6 * (1 / (2*np*b-nm2) - 1 / (2*np*a-nm2)) / (np3);
-    tp  = tp1 + tp2 + tp3 + tp4 + tp5;
-    tav = (ts + tp) / (2 * sa2);
-
-    return tav
+function expint(x)
+  A = log((0.56146 / x + 0.65) * (1 + x))
+  B = x^4 * exp(7.7 * x) * (2 + x)^3.7
+  (A^-7.7 + B)^-0.13
 end
 
-function expint(x::ForwardDiff.Dual{T,V,N}) where {T,V,N}
+#= function expint(x::ForwardDiff.Dual{T,V,N}) where {T,V,N}
     # Extract values:
     A = ForwardDiff.value(x)
     dAdx = [-exp(-A)/A * ForwardDiff.partials(x,i) for i=1:N];
     dAdx = ForwardDiff.Partials(tuple(dAdx...));
     return eltype(x)(expint(A),dAdx);
-end
+end =#
