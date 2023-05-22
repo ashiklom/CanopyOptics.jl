@@ -20,10 +20,8 @@ function createLeafOpticalStruct(λ_bnds)
     
     KS = readdlm(OPTI_2021, '\t',FT)
     N  = length(λ_bnds)-1
-    (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc,
-        talf, ralf, t12, r12, t21, r21) = [zeros(FT,N) for _ = 1:N];
-    vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc,
-        talf, ralf, t12, r12, t21, r21)
+    λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc = [zeros(FT,N) for _ = 1:N];
+    vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc)
     λ     = KS[:,1]*u"nm";
     @inbounds for i=1:N
         start = min(λ_ref[i],λ_ref[i+1])
