@@ -102,4 +102,17 @@ struct LeafOpticalProperties{FT,FT2} <: AbstractProspectProperties
     Kp::Array{FT, 1}
     "specific absorption coefficient of carbon based constituents `[cm² g⁻¹]`" 
     Kcbc::Array{FT, 1} 
+    ### Pre-calculated PROSPECT quantities
+    "talf = calctav(40, nr)"
+    talf::Array{FT, 1}
+    "ralf = 1 - talf"
+    ralf::Array{FT, 1}
+    "t12 = calctav(90, nr)"
+    t12::Array{FT, 1}
+    "r12 = 1 - t12"
+    r12::Array{FT, 1}
+    "t21 = t12 / nr^2"
+    t21::Array{FT, 1}
+    "r12 = 1 - t21"
+    r21::Array{FT, 1}
 end
