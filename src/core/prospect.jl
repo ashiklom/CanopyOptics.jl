@@ -6,6 +6,7 @@ Computes leaf optical properties (reflectance and transittance) based on PROSPEC
 # Arguments
 - `leaf`  [`LeafProspectProProperties`](@ref) type struct which provides leaf composition
 - `optis` [`LeafOpticalProperties`](@ref) type struct, which provides absorption cross sections and spectral grid
+- `autodiff` (boolean) If true, skip some steps that don't play well with 
 # Examples
 ```julia-repl
 julia> opti = createLeafOpticalStruct((400.0:5:2400)*u"nm");
@@ -15,7 +16,8 @@ julia> T,R = prospect(leaf,opti);
 """
 function prospect(
             leaf::LeafProspectProProperties{FT},
-            optis
+            optis;
+            autodiff = false
 ) where {FT}
     # ***********************************************************************
     # Jacquemoud S., Baret F. (1990), PROSPECT: a model of leaf optical
@@ -36,9 +38,12 @@ function prospect(
 
     # This can go into a separate multiple dispatch function as the rest remains constant across versions!
     Kall=(Ccab*Kcab + Ccar*Kcar + Canth*Kant + Cbrown*Kb + Cw*Kw + Cm*Km + Cprot*Kp +Ccbc * Kcbc) / N;
+
+    # If `autodiff`, use a simpler approximation to the exponential integral
+    expint_fun = autodiff ? expint_approx : expint
    
     # Adding eps() here to keep it stable and NOT set to 1 manually when Kall=0 (ForwardDiff won't work otherwise)
-    tau = (FT(1) .-Kall).*exp.(-Kall) .+ Kall.^2 .*real.(expint.(Kall.+eps(FT)))
+    tau = (FT(1) .-Kall).*exp.(-Kall) .+ Kall.^2 .*real.(expint_fun.(Kall.+eps(FT)))
 
     # ***********************************************************************
     # reflectance & transmittance of one layer
@@ -83,9 +88,11 @@ function prospect(
     Tsub    = bNm1.*(a2.-1)./denom
 
     # Case of zero absorption
-    # j       = findall(r.+t .>= 1)
-    # Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(leaf.N-1))
-    # Rsub[j] = 1 .-Tsub[j]
+    if !autodiff
+        j       = findall(r.+t .>= 1)
+        Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(leaf.N-1))
+        Rsub[j] = 1 .-Tsub[j]
+    end
 
     # Reflectance & transmittance of the leaf: combine top layer with next N-1 layers
     denom   = FT(1) .-Rsub.*r
@@ -97,16 +104,21 @@ function prospect(
     return T,R
 end
 
-function expint(x)
-  A = log((0.56146 / x + 0.65) * (1 + x))
-  B = x^4 * exp(7.7 * x) * (2 + x)^3.7
-  (A^-7.7 + B)^-0.13
+function expint_approx(x)
+    """
+    Swami and Ohija approximation to the Exponential Integral.
+    This is very simple, but differences with the more precise (and expensive)
+    approaches are orders of magnitude smaller than other error sources.
+    """
+    A = log((0.56146 / x + 0.65) * (1 + x))
+    B = x^4 * exp(7.7 * x) * (2 + x)^3.7
+    return (A^-7.7 + B)^-0.13
 end
 
-#= function expint(x::ForwardDiff.Dual{T,V,N}) where {T,V,N}
+function expint(x::ForwardDiff.Dual{T,V,N}) where {T,V,N}
     # Extract values:
     A = ForwardDiff.value(x)
     dAdx = [-exp(-A)/A * ForwardDiff.partials(x,i) for i=1:N];
     dAdx = ForwardDiff.Partials(tuple(dAdx...));
     return eltype(x)(expint(A),dAdx);
-end =#
+end
