@@ -13,24 +13,39 @@ julia> opti = createLeafOpticalStruct((0.4:0.1:2.4)*u"μm");                    
 julia> opti = CanopyOptics.createLeafOpticalStruct((10000.0:100:25000.0)u"1/cm");  # in wavenumber (cm⁻¹)
 ```
 """
-function createLeafOpticalStruct(λ_bnds)
+function createLeafOpticalStruct(λ_bnds; method = :average)
+    @assert method in [:average, :interp]
     FT = eltype(ustrip(λ_bnds[1]))
     # Reference input grid converted to nm:
     λ_ref = unit2nm(λ_bnds)
     
     KS = readdlm(OPTI_2021, '\t',FT)
-    N  = length(λ_bnds)-1
-    λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc = [zeros(FT,N) for _ = 1:N];
-    vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc)
     λ     = KS[:,1]*u"nm";
-    @inbounds for i=1:N
-        start = min(λ_ref[i],λ_ref[i+1])
-        stop  = max(λ_ref[i],λ_ref[i+1])
-        ind_all = findall((λ .≥ start) .& (λ .< stop) )
-        isempty(ind_all) ? (@warn "Some λ_bnds bins are empty, better coarsen the input grid $(λ_bnds[i]) -> $(λ_bnds[i+1])" ) : nothing
-        for j in eachindex(vars)
-            vars[j][i] =  mean(view(KS,ind_all,j)); 
+    if method == :average
+        N  = length(λ_bnds)-1
+        λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc = [zeros(FT,N) for _ = 1:N];
+        vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc)
+        @inbounds for i=1:N
+            start = min(λ_ref[i],λ_ref[i+1])
+            stop  = max(λ_ref[i],λ_ref[i+1])
+            ind_all = findall((λ .≥ start) .& (λ .< stop) )
+            isempty(ind_all) ? (@warn "Some λ_bnds bins are empty, better coarsen the input grid $(λ_bnds[i]) -> $(λ_bnds[i+1])" ) : nothing
+            for j in eachindex(vars)
+                vars[j][i] =  mean(view(KS,ind_all,j)); 
+            end
         end
+    elseif method == :interp
+        N = length(λ_bnds)
+        λ_out = ustrip(λ_ref) # Strip unit so it can be added back later...
+        nᵣ = linear_interpolation(λ, KS[:, 2])(λ_ref)
+        Kcab = linear_interpolation(λ, KS[:, 3])(λ_ref)
+        Kcar = linear_interpolation(λ, KS[:, 4])(λ_ref)
+        Kant = linear_interpolation(λ, KS[:, 5])(λ_ref)
+        Kb = linear_interpolation(λ, KS[:, 6])(λ_ref)
+        Kw = linear_interpolation(λ, KS[:, 7])(λ_ref)
+        Km = linear_interpolation(λ, KS[:, 8])(λ_ref)
+        Kp = linear_interpolation(λ, KS[:, 9])(λ_ref)
+        Kcbc = linear_interpolation(λ, KS[:,10])(λ_ref)
     end
     # Get output unit:
     ou = unit(λ_bnds[1])

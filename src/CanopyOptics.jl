@@ -16,6 +16,8 @@ using QuadGK                   # Numerical Integration
 using CUDA 
 using ForwardDiff
 
+using Interpolations
+
 import SpecialFunctions.expint 
 #"Definition of Stokes vector types:"
 #using vSmartMOM.Scattering: Stokes_I, Stokes_IQU, Stokes_IQUV
