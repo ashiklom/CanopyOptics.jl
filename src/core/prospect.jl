@@ -96,11 +96,3 @@ function prospect(
     
     return T,R
 end
-
-function expint(x::ForwardDiff.Dual{T,V,N}) where {T,V,N}
-    # Extract values:
-    A = ForwardDiff.value(x)
-    dAdx = [-exp(-A)/A * ForwardDiff.partials(x,i) for i=1:N];
-    dAdx = ForwardDiff.Partials(tuple(dAdx...));
-    return eltype(x)(expint(A),dAdx);
-end
