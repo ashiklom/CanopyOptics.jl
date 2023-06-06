@@ -16,14 +16,15 @@ using QuadGK                   # Numerical Integration
 using CUDA 
 using ForwardDiff
 
-using Interpolations
-
 import SpecialFunctions.expint 
 #"Definition of Stokes vector types:"
 #using vSmartMOM.Scattering: Stokes_I, Stokes_IQU, Stokes_IQUV
 
 # Filename for ProspectPro optical properties
 const OPTI_2021 = artifact"Prospect" * "/dataSpec_PRO.csv";
+const OPTI_PROD = artifact"Prospect" * "/dataSpec_PD.csv";
+const OPTI_PRO5 = artifact"Prospect" * "/dataSpec_P5.csv";
+const OPTI_PRO4 = artifact"Prospect" * "/dataSpec_P4.csv";
 
 # Needs to be more modular later:
 FT = Float64 

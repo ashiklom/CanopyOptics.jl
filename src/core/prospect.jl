@@ -84,7 +84,7 @@ function prospect(
 
     # Case of zero absorption
     j       = findall(r.+t .>= 1)
-    Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(leaf.N-1))
+    Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(N-1))
     Rsub[j] = 1 .-Tsub[j]
 
     # Reflectance & transmittance of the leaf: combine top layer with next N-1 layers

@@ -13,39 +13,40 @@ julia> opti = createLeafOpticalStruct((0.4:0.1:2.4)*u"μm");                    
 julia> opti = CanopyOptics.createLeafOpticalStruct((10000.0:100:25000.0)u"1/cm");  # in wavenumber (cm⁻¹)
 ```
 """
-function createLeafOpticalStruct(λ_bnds; method = :average)
-    @assert method in [:average, :interp]
+function createLeafOpticalStruct(λ_bnds; prospect_version = :pro)
+    @assert prospect_version in [:pro, :d, :5, :4]
     FT = eltype(ustrip(λ_bnds[1]))
     # Reference input grid converted to nm:
     λ_ref = unit2nm(λ_bnds)
+
+    KS_file = Dict(
+        :pro => OPTI_2021,
+        :d => OPTI_PROD,
+        :5 => OPTI_PRO5,
+        :4 => OPTI_PRO4
+    )
     
-    KS = readdlm(OPTI_2021, '\t',FT)
+    KS = readdlm(KS_file[prospect_version], '\t',FT)
     λ     = KS[:,1]*u"nm";
-    if method == :average
-        N  = length(λ_bnds)-1
-        λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc = [zeros(FT,N) for _ = 1:N];
+    N  = length(λ_bnds)-1
+    λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc = [zeros(FT,N) for _ = 1:N];
+    if prospect_version == :pro
         vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc)
-        @inbounds for i=1:N
-            start = min(λ_ref[i],λ_ref[i+1])
-            stop  = max(λ_ref[i],λ_ref[i+1])
-            ind_all = findall((λ .≥ start) .& (λ .< stop) )
-            isempty(ind_all) ? (@warn "Some λ_bnds bins are empty, better coarsen the input grid $(λ_bnds[i]) -> $(λ_bnds[i+1])" ) : nothing
-            for j in eachindex(vars)
-                vars[j][i] =  mean(view(KS,ind_all,j)); 
-            end
+    elseif prospect_version == :d
+        vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km)
+    elseif prospect_version == :5
+        vars = (λ_out, nᵣ, Kcab, Kcar, Kb, Kw, Km)
+    elseif prospect_version == :4
+        vars = (λ_out, nᵣ, Kcab, Kw, Km)
+    end
+    @inbounds for i=1:N
+        start = min(λ_ref[i],λ_ref[i+1])
+        stop  = max(λ_ref[i],λ_ref[i+1])
+        ind_all = findall((λ .≥ start) .& (λ .< stop) )
+        isempty(ind_all) ? (@warn "Some λ_bnds bins are empty, better coarsen the input grid $(λ_bnds[i]) -> $(λ_bnds[i+1])" ) : nothing
+        for j in eachindex(vars)
+            vars[j][i] =  mean(view(KS,ind_all,j)); 
         end
-    elseif method == :interp
-        N = length(λ_bnds)
-        λ_out = ustrip(λ_ref) # Strip unit so it can be added back later...
-        nᵣ = linear_interpolation(λ, KS[:, 2])(λ_ref)
-        Kcab = linear_interpolation(λ, KS[:, 3])(λ_ref)
-        Kcar = linear_interpolation(λ, KS[:, 4])(λ_ref)
-        Kant = linear_interpolation(λ, KS[:, 5])(λ_ref)
-        Kb = linear_interpolation(λ, KS[:, 6])(λ_ref)
-        Kw = linear_interpolation(λ, KS[:, 7])(λ_ref)
-        Km = linear_interpolation(λ, KS[:, 8])(λ_ref)
-        Kp = linear_interpolation(λ, KS[:, 9])(λ_ref)
-        Kcbc = linear_interpolation(λ, KS[:,10])(λ_ref)
     end
     # Get output unit:
     ou = unit(λ_bnds[1])
