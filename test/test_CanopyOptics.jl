@@ -16,13 +16,13 @@
     @testset "PROSPECT" begin
         waves_1nm = (399.5:1.0:2500.5)u"nm"
         waves_10nm = (400.0:10.0:2500.0)u"nm"
-        prospect_versions = [:pro, :d, :5, :4]
+        prospect_versions = ("pro", "d", "4", "5")
         for version in prospect_versions
             @testset "PROSPECT $version" begin
                 for λ in (waves_1nm, waves_10nm)
                     for FT in [Float32, Float64]
                         optis = createLeafOpticalStruct(λ; prospect_version = version)
-                        if version == :pro
+                        if version == "pro"
                             leaf = LeafProspectProProperties{FT}(Cm=0.0)
                         else
                             leaf = LeafProspectProProperties{FT}(Cm=0.01, Ccbc=0.0, Cprot=0.0)

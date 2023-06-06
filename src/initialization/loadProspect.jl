@@ -13,30 +13,31 @@ julia> opti = createLeafOpticalStruct((0.4:0.1:2.4)*u"μm");                    
 julia> opti = CanopyOptics.createLeafOpticalStruct((10000.0:100:25000.0)u"1/cm");  # in wavenumber (cm⁻¹)
 ```
 """
-function createLeafOpticalStruct(λ_bnds; prospect_version = :pro)
-    @assert prospect_version in [:pro, :d, :5, :4]
+function createLeafOpticalStruct(λ_bnds; prospect_version = "pro")
+    prospect_version = lowercase(prospect_version)
+    @assert prospect_version in ("pro", "d", "5", "4")
     FT = eltype(ustrip(λ_bnds[1]))
     # Reference input grid converted to nm:
     λ_ref = unit2nm(λ_bnds)
 
     KS_file = Dict(
-        :pro => OPTI_2021,
-        :d => OPTI_PROD,
-        :5 => OPTI_PRO5,
-        :4 => OPTI_PRO4
+        "pro" => OPTI_2021,
+        "d" => OPTI_PROD,
+        "5" => OPTI_PRO5,
+        "4" => OPTI_PRO4
     )
     
     KS = readdlm(KS_file[prospect_version], '\t',FT)
     λ     = KS[:,1]*u"nm";
     N  = length(λ_bnds)-1
     λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc = [zeros(FT,N) for _ = 1:N];
-    if prospect_version == :pro
+    if prospect_version == "pro"
         vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km, Kp, Kcbc)
-    elseif prospect_version == :d
+    elseif prospect_version == "d"
         vars = (λ_out, nᵣ, Kcab, Kcar, Kant, Kb, Kw, Km)
-    elseif prospect_version == :5
+    elseif prospect_version == "5"
         vars = (λ_out, nᵣ, Kcab, Kcar, Kb, Kw, Km)
-    elseif prospect_version == :4
+    elseif prospect_version == "4"
         vars = (λ_out, nᵣ, Kcab, Kw, Km)
     end
     @inbounds for i=1:N
