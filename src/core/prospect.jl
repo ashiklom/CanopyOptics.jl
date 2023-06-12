@@ -57,9 +57,7 @@ function prospect(
     # bottom surface side
     t       = t12.*tau.*t21./denom
     r       = r12+r21.*tau.*t
-    Tsub = similar(tau)
-    Rsub = similar(tau)
-    TRsub!(Tsub, Rsub, t, r, N)
+    Tsub, Rsub = TRsub(t, r, N)
 
     # ***********************************************************************
     # reflectance & transmittance of N layers
@@ -118,9 +116,11 @@ function TRsub(t, r, N)
     return [Tsub, Rsub]
 end
 
-function TRsub!(Tsub, Rsub, t, r, N)
+function TRsub(t::AbstractVector, r::AbstractVector, N)
+    Tsub = similar(t)
+    Rsub = similar(t)
     @inbounds for i in eachindex(t)
         Tsub[i], Rsub[i] = TRsub(t[i], r[i], N)
     end
-    nothing
+    return Tsub, Rsub
 end
