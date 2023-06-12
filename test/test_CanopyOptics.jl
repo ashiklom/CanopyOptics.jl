@@ -27,11 +27,28 @@
                         else
                             leaf = LeafProspectProProperties{FT}(Cm=0.01, Ccbc=0.0, Cprot=0.0)
                         end
-                        T, R = prospect(leaf, optis)
-                        @test all(T .>= 0)
-                        @test all(T .<= 1)
-                        @test all(R .>= 0)
-                        @test all(R .<= 1)
+                        # Zero values of PROSPECT traits are likely to produce
+                        # numerical instability
+                        small_leaf = LeafProspectProProperties{FT}(
+                            N=1.0, Ccab=0.0, Ccar=0.0, Canth=0.0, Cbrown=0.0,
+                            Cw=0.0, Cm=0.0, Ccbc=0.0, Cprot=0.0
+                        )
+                        # Big values should be pretty stable and just saturate
+                        # absorbance...but check them anyway just in case.
+                        big_leaf = LeafProspectProProperties{FT}(
+                            N=5.0, Ccab=1000.0, Ccar=100.0, Canth=100.0, Cbrown=100.0,
+                            Cw=0.8, Cm=0.8, Ccbc=0.5, Cprot=0.5
+                        )
+                        leaves = (leaf, small_leaf, big_leaf)
+                        for l in leaves
+                            T, R = prospect(l, optis)
+                            @test all(isfinite.(T))
+                            @test all(isfinite.(R))
+                            @test all(T .>= 0)
+                            @test all(T .<= 1)
+                            @test all(R .>= 0)
+                            @test all(R .<= 1)
+                        end
                     end
                 end
             end
