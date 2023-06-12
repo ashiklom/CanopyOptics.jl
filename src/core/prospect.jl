@@ -37,8 +37,7 @@ function prospect(
     # This can go into a separate multiple dispatch function as the rest remains constant across versions!
     Kall=(Ccab*Kcab + Ccar*Kcar + Canth*Kant + Cbrown*Kb + Cw*Kw + Cm*Km + Cprot*Kp +Ccbc * Kcbc) / N;
 
-    # Adding eps() here to keep it stable and NOT set to 1 manually when Kall=0 (ForwardDiff won't work otherwise)
-    tau = (FT(1) .-Kall).*exp.(-Kall) .+ Kall.^2 .*real.(expint.(Kall.+eps(FT)))
+    tau = τ.(Kall)
 
     # ***********************************************************************
     # reflectance & transmittance of one layer
@@ -52,12 +51,15 @@ function prospect(
     # talf, ralf, t12, r12, t21, r21 -- All are precalculated in `loadProspect.jl`
 
     # top surface side
-    denom   = FT(1) .-r21.*r21.*tau.^2
+    denom   = 1 .-r21.*r21.*tau.^2
     Ta      = talf.*tau.*t21./denom
     Ra      = ralf.+r21.*tau.*Ta
     # bottom surface side
     t       = t12.*tau.*t21./denom
     r       = r12+r21.*tau.*t
+    Tsub = similar(tau)
+    Rsub = similar(tau)
+    TRsub!(Tsub, Rsub, t, r, N)
 
     # ***********************************************************************
     # reflectance & transmittance of N layers
@@ -68,31 +70,57 @@ function prospect(
     # | transmitted through a pile of plates; Proc. Roy. Soc. Lond.
     # 11:545-556.
     # ***********************************************************************
-    D       = sqrt.(((FT(1) .+r.+t).*(FT(1) .+r.-t).*(FT(1) .-r.+t).*(FT(1) .-r.-t)).+5eps(FT))
-    #println(typeof(D), typeof(r), typeof(t))
-    rq      = r.^2
-    tq      = t.^2
-    a       = (FT(1) .+rq.-tq.+D)./(2r)
-    b       = (FT(1) .-rq.+tq.+D)./(2t)
-
-    bNm1    = b.^(N-1);                  #
-    bN2     = bNm1.^2
-    a2      = a.^2
-    denom   = a2.*bN2.-1
-    Rsub    = a.*(bN2.-1)./denom
-    Tsub    = bNm1.*(a2.-1)./denom
-
-    # Case of zero absorption
-    j       = findall(r.+t .>= 1)
-    Tsub[j] = t[j]./(t[j]+(1 .-t[j])*(N-1))
-    Rsub[j] = 1 .-Tsub[j]
 
     # Reflectance & transmittance of the leaf: combine top layer with next N-1 layers
-    denom   = FT(1) .-Rsub.*r
+    denom   = 1 .-Rsub.*r
     # lambertian Tranmsission
     T    = Ta.*Tsub./denom
     # lambertian Reflectance
     R    = Ra.+Ta.*Rsub.*t./denom
     
     return T,R
+end
+
+function τ(k)
+    if (k <= 0)
+        return one(k)
+    end
+    return (one(k) - k) * exp(-k) + k^2 * expint(k)
+end
+
+function TRsub(t, r, N)
+    # Case of zero absorption
+    if r + t >= 1
+        Tsub = t / (t + (1 - t) * (N-1))
+        Rsub = 1 - Tsub
+        return Tsub, Rsub
+    end
+    # ***********************************************************************
+    # reflectance & transmittance of N layers
+    # Stokes equations to compute properties of next N-1 layers [N real]
+    # Normal case()
+    # ***********************************************************************
+    # Stokes G.G. (1862), On the intensity of the light reflected from
+    # | transmitted through a pile of plates; Proc. Roy. Soc. Lond.
+    # 11:545-556.
+    # ***********************************************************************
+    D       = sqrt(((1+r+t)*(1+r-t)*(1-r+t)*(1-r-t)))
+    rq      = r^2
+    tq      = t^2
+    a       = (1+rq-tq+D)/(2r)
+    b       = (1-rq+tq+D)/(2t)
+    bNm1    = b^(N-1)
+    bN2     = bNm1^2
+    a2      = a^2
+    denom   = a2*bN2-1
+    Rsub    = a*(bN2-1)/denom
+    Tsub    = bNm1*(a2-1)/denom
+    return [Tsub, Rsub]
+end
+
+function TRsub!(Tsub, Rsub, t, r, N)
+    @inbounds for i in eachindex(t)
+        Tsub[i], Rsub[i] = TRsub(t[i], r[i], N)
+    end
+    nothing
 end
