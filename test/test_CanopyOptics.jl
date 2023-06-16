@@ -39,15 +39,34 @@
                             N=5.0, Ccab=1000.0, Ccar=100.0, Canth=100.0, Cbrown=100.0,
                             Cw=0.8, Cm=0.8, Ccbc=0.5, Cprot=0.5
                         )
-                        leaves = (leaf, small_leaf, big_leaf)
-                        for l in leaves
-                            T, R = prospect(l, optis)
-                            @test all(isfinite.(T))
-                            @test all(isfinite.(R))
-                            @test all(T .>= 0)
-                            @test all(T .<= 1)
-                            @test all(R .>= 0)
-                            @test all(R .<= 1)
+                        # This leaf threw DomainErrors in Turing
+                        crazy_leaf = LeafProspectProProperties{FT}(
+                            N = 1.2505020164739922,
+                            Ccab = 0.17416047191818448,
+                            Ccar = 0.060332183604325934,
+                            Canth = 1.0884711857846752e-22,
+                            Cbrown = 1.0555892803208574e9,
+                            Cw = 0.006337122152559249,
+                            Ccbc = 4.57099243856743e-5,
+                            Cprot = 208.49123919175113
+                        )
+                        leaves = (
+                            normal = leaf, 
+                            small = small_leaf,
+                            big = big_leaf,
+                            crazy = crazy_leaf
+                        )
+                        for lname in keys(leaves)
+                            @testset "Leaf $lname, type $FT" begin
+                                l = leaves[lname]
+                                T, R = prospect(l, optis)
+                                @test all(isfinite.(T))
+                                @test all(isfinite.(R))
+                                @test all(T .>= 0)
+                                @test all(T .<= 1)
+                                @test all(R .>= 0)
+                                @test all(R .<= 1)
+                            end
                         end
                     end
                 end

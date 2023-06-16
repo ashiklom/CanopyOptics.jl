@@ -83,10 +83,19 @@ function τ(k)
     if (k <= 0)
         return one(k)
     end
-    return (one(k) - k) * exp(-k) + k^2 * expint(k)
+    return max(zero(k), (one(k) - k) * exp(-k) + k^2 * expint(k))
 end
 
 function TRsub(t, r, N)
+    # Case of zero transmission (extremely high values of K)
+    # Julia is OK with tiny floats (1e-309!), but squaring them goes to zero,
+    # which causes division problems later. So, test against both here.
+    tq = t^2
+    if tq == zero(tq)
+        Tsub = zero(t)
+        Rsub = r
+        return Tsub, Rsub
+    end
     # Case of zero absorption
     if r + t >= 1
         Tsub = t / (t + (1 - t) * (N-1))
@@ -103,8 +112,7 @@ function TRsub(t, r, N)
     # 11:545-556.
     # ***********************************************************************
     D       = sqrt(((1+r+t)*(1+r-t)*(1-r+t)*(1-r-t)))
-    rq      = r^2
-    tq      = t^2
+    rq      = r^2  
     a       = (1+rq-tq+D)/(2r)
     b       = (1-rq+tq+D)/(2t)
     bNm1    = b^(N-1)
@@ -113,7 +121,7 @@ function TRsub(t, r, N)
     denom   = a2*bN2-1
     Rsub    = a*(bN2-1)/denom
     Tsub    = bNm1*(a2-1)/denom
-    return [Tsub, Rsub]
+    return Tsub, Rsub
 end
 
 function TRsub(t::AbstractVector, r::AbstractVector, N)
