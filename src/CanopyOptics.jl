@@ -40,6 +40,7 @@ include("utils/canopy_angles.jl")
 include("utils/fresnel.jl")
 
 include("core/prospect.jl")
+include("core/liberty.jl")
 include("core/leafAngleRoutines.jl")
 
 include("initialization/loadProspect.jl")
@@ -54,7 +55,7 @@ include("forest_prototyping/subroutines.jl")
 include("utils/dielectric.jl")
 
 
-export prospect
+export prospect, liberty
 export createLeafOpticalStruct, LeafProspectProProperties, LeafOpticalProperties, dirVector, dirVector_μ
 export AbstractCanopyScatteringType, BiLambertianCanopyScattering, SpecularCanopyScattering
 export PureIce, LiquidPureWater, LiquidSaltWater
