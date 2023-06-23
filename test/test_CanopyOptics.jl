@@ -71,6 +71,23 @@
                     end
                 end
             end
+            @testset "PROSPECT gradient" begin
+                function test_prospect(θ::AbstractVector{T}) where {T}
+                    opti = createLeafOpticalStruct((400.0:1.0:2500.0)*u"nm")
+                    leaf = LeafProspectProProperties{T}(Ccab=θ[1], Ccar=θ[2], Canth=θ[3])
+                    _, R = prospect(leaf, opti)
+                    return R
+                end
+                refl = test_prospect([40.0, 8.0, 4.0])
+                @test all(refl .>= 0)
+                @test all(refl .<= 1)
+                jac = ForwardDiff.jacobian(test_prospect, [40.0, 8.0, 4.0])
+                @test all(isfinite.(jac))
+                # Increasing pigments decreases reflectance in visible
+                @test all(jac[1:100,:] .<= 0)
+                # ...but has no effect in the SWIR
+                @test all(jac[(end-100):end,:] .== 0)
+            end
         end
     end
 
