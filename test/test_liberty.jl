@@ -9,7 +9,7 @@ end
 
 @testset "LIBERTY defaults" begin
     using DelimitedFiles
-    liberty_raw = readdlm("/home/ashiklom/projects/rtm/rrtm/data-raw/liberty_raw.dat"; comments=true)
+    liberty_raw = readdlm("/home/ashiklom/projects/rrtm/data-raw/liberty_raw.dat"; comments=true)
     optis = eachcol(liberty_raw)
     D = 40.0
     xu = 0.045
